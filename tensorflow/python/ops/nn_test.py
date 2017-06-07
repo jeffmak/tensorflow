@@ -36,7 +36,7 @@ from tensorflow.python.ops import variables
 import tensorflow.python.ops.nn_grad  # pylint: disable=unused-import
 from tensorflow.python.ops.nn_impl import _compute_sampled_logits
 from tensorflow.python.platform import test as test_lib
-
+from tensorflow.core.protobuf import config_pb2
 
 class ZeroFractionTest(test_lib.TestCase):
 
@@ -179,7 +179,7 @@ class L2LossTest(test_lib.TestCase):
 
   def testL2Loss(self):
     for dtype in [dtypes.float32, dtypes.float64]:
-      with self.test_session():
+      with self.test_session(config=config_pb2.ConfigProto(log_device_placement=True)):
         x = constant_op.constant(
             [1.0, 0.0, 3.0, 2.0], shape=[2, 2], name="x", dtype=dtype)
         l2loss = nn_ops.l2_loss(x)
