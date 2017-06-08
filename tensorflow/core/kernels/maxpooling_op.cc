@@ -1054,7 +1054,7 @@ REGISTER_KERNEL_BUILDER(Name("MaxPoolGrad")
 REGISTER_KERNEL_BUILDER(Name("MaxPoolGradGrad")
                             .Device(DEVICE_SYCL)
                             .TypeConstraint<float>("T"),
-                        MaxPoolingGradOp<SYCLDevice, float>);
+                        MaxPoolingGradGradOp<SYCLDevice, float>);
 #endif // TENSORFLOW_USE_SYCL
 
 #undef REGISTER_MAX_POOL_KERNELS
