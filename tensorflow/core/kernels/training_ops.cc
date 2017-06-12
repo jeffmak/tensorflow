@@ -238,6 +238,34 @@ struct ApplyMomentum<CPUDevice, T> {
   }
 };
 
+
+#ifdef TENSORFLOW_USE_SYCL
+template <typename T>
+struct ApplyMomentum<SYCLDevice, T> {
+  void operator()(const SYCLDevice& d, typename TTypes<T>::Flat var,
+                  typename TTypes<T>::Flat accum,
+                  typename TTypes<T>::ConstScalar lr,
+                  typename TTypes<T>::ConstFlat grad,
+                  typename TTypes<T>::ConstScalar momentum, bool use_nesterov) {
+    #if !defined(EIGEN_HAS_INDEX_LIST)
+        Eigen::array<int, 1> rank1{1};
+    #else
+        Eigen::IndexList<Eigen::type2index<1> > rank1;
+    #endif
+    const int size = grad.dimension(0);
+    Eigen::array<int, 1> broadcast_dim{size};
+    accum.device(d) = accum * momentum.reshape(rank1).broadcast(broadcast_dim) + grad;
+    if (use_nesterov) {
+      var.device(d) -= grad * lr.reshape(rank1).broadcast(broadcast_dim) +
+                       accum * momentum.reshape(rank1).broadcast(broadcast_dim) *
+                           lr.reshape(rank1).broadcast(broadcast_dim);
+    } else {
+      var.device(d) -= lr.reshape(rank1).broadcast(broadcast_dim) * accum;
+    }
+  }
+};
+#endif // TENSORFLOW_USE_SYCL
+
 template <typename Device, typename T>
 struct ApplyAdamNonCuda {
   void operator()(const Device& d, typename TTypes<T>::Flat var,
@@ -2228,6 +2256,13 @@ REGISTER_KERNELS(GPU, Eigen::half);
 REGISTER_KERNELS(GPU, float);
 REGISTER_KERNELS(GPU, double);
 #endif
+
+
+#ifdef TENSORFLOW_USE_SYCL
+REGISTER_KERNELS(SYCL, float);
+REGISTER_KERNELS(SYCL, double);
+#endif // TENSORFLOW_USE_SYCL
+
 #undef REGISTER_CPU_KERNELS
 #undef REGISTER_KERNELS
 
