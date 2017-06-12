@@ -93,7 +93,7 @@ REGISTER_GPU_KERNEL(Eigen::half);
 #define REGISTER_KERNEL(T)                                       \
   REGISTER_KERNEL_BUILDER(                                       \
       Name("L2Loss").Device(DEVICE_SYCL).TypeConstraint<T>("T"), \
-      L2LossOp<SyclDevice, T>);
+      L2LossOp<SYCLDevice, T>);
 
 REGISTER_KERNEL(float);
 REGISTER_KERNEL(double);
