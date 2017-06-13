@@ -159,6 +159,7 @@ TF_CALL_double(REGISTER_GPU);
                           HSVToRGBOp<SYCLDevice, T>);
 TF_CALL_float(REGISTER_SYCL);
 TF_CALL_double(REGISTER_SYCL);
+#undef REGISTER_SYCL
 #endif
 
 }  // namespace tensorflow

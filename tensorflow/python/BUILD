@@ -2160,7 +2160,7 @@ cuda_py_test(
 
 cuda_py_test(
     name = "image_ops_test",
-    size = "large",
+    size = "enormous",
     srcs = ["ops/image_ops_test.py"],
     additional_deps = [
         ":array_ops",
