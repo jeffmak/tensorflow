@@ -374,4 +374,28 @@ TF_CALL_GPU_NUMBER_TYPES_NO_HALF(REGISTER_GRAD_KERNEL);
 
 #endif  // GOOGLE_CUDA
 
+// #ifdef TENSORFLOW_USE_SYCL
+//
+// #define REGISTER_KERNEL(T)                            \
+//   REGISTER_KERNEL_BUILDER(Name("ResizeBilinear")      \
+//                               .Device(DEVICE_GPU)     \
+//                               .TypeConstraint<T>("T") \
+//                               .HostMemory("size"),    \
+//                           ResizeBilinearOp<GPUDevice, T>);
+//
+// TF_CALL_GPU_NUMBER_TYPES_NO_HALF(REGISTER_KERNEL);
+//
+// #undef REGISTER_KERNEL
+//
+// #define REGISTER_GRAD_KERNEL(T)                                             \
+//   REGISTER_KERNEL_BUILDER(                                                  \
+//       Name("ResizeBilinearGrad").Device(DEVICE_GPU).TypeConstraint<T>("T"), \
+//       ResizeBilinearOpGrad<GPUDevice, T>);
+//
+// TF_CALL_GPU_NUMBER_TYPES_NO_HALF(REGISTER_GRAD_KERNEL);
+//
+// #undef REGISTER_GRAD_KERNEL
+//
+// #endif
+
 }  // namespace tensorflow

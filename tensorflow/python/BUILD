@@ -2252,7 +2252,7 @@ cuda_py_test(
 
 cuda_py_test(
     name = "math_ops_test",
-    size = "small",
+    size = "medium",
     srcs = ["ops/math_ops_test.py"],
     additional_deps = [
         ":array_ops",
