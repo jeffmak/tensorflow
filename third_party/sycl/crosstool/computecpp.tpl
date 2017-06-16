@@ -43,7 +43,7 @@ def main():
 
   # create a blacklist of folders that will be skipped when compiling with ComputeCpp
   skip_extensions = [".cu.cc"]
-  skip_folders = ["tensorflow/compiler", "tensorflow/docs_src", "tensorflow/tensorboard", "third_party", "external", "hexagon"]
+  skip_folders = ["tensorflow/compiler", "tensorflow/docs_src", "tensorflow/stream_executor", "tensorflow/tensorboard", "tensorflow/tools", "third_party", "external", "hexagon"]
   skip_folders = [(folder + '/') for folder in skip_folders]
   # if compiling external project skip computecpp
   if any(compiled_file_name.endswith(_ext) for _ext in skip_extensions) or any(_folder in output_file_name for _folder in skip_folders):
@@ -60,7 +60,7 @@ def main():
     return pipe.returncode
 
   # check if it has parallel_for in it
-  if not '.parallel_for' in preprocessed_file_str:
+  if not b'.parallel_for' in preprocessed_file_str:
     # call CXX compiler like usual
     with tempfile.NamedTemporaryFile(suffix=".ii") as preprocessed_file: # Force '.ii' extension so that g++ does not preprocess the file again
       preprocessed_file.write(preprocessed_file_str)
