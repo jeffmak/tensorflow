@@ -413,25 +413,25 @@ REGISTER_KERNEL_BUILDER(Name("AdjustContrastv2").Device(DEVICE_GPU),
                         AdjustContrastOpv2<GPUDevice>);
 #endif  // GOOGLE_CUDA
 
-// #ifdef TENSORFLOW_USE_SYCL
-// template <>
-// class AdjustContrastOpv2<SYCLDevice> : public AdjustContrastOpV2Base {
-//  public:
-//   explicit AdjustContrastOpv2(OpKernelConstruction* context)
-//       : AdjustContrastOpV2Base(context) {}
-//
-//   void DoCompute(OpKernelContext* context,
-//                  const ComputeOptions& options) override {
-//     const int64 shape[4] = {options.batch, options.height, options.width,
-//                             options.channels};
-//     functor::AdjustContrastv2<SYCLDevice>()(
-//         context->eigen_device<SYCLDevice>(),
-//         options.input->shaped<float, 4>(shape), options.factor->scalar<float>(),
-//         options.output->shaped<float, 4>(shape));
-//   }
-// };
-// REGISTER_KERNEL_BUILDER(Name("AdjustContrastv2").Device(DEVICE_SYCL),
-//                         AdjustContrastOpv2<SYCLDevice>);
-// #endif
+#ifdef TENSORFLOW_USE_SYCL
+template <>
+class AdjustContrastOpv2<SYCLDevice> : public AdjustContrastOpV2Base {
+ public:
+  explicit AdjustContrastOpv2(OpKernelConstruction* context)
+      : AdjustContrastOpV2Base(context) {}
+
+  void DoCompute(OpKernelContext* context,
+                 const ComputeOptions& options) override {
+    const int64 shape[4] = {options.batch, options.height, options.width,
+                            options.channels};
+    functor::AdjustContrastv2<SYCLDevice>()(
+        context->eigen_device<SYCLDevice>(),
+        options.input->shaped<float, 4>(shape), options.factor->scalar<float>(),
+        options.output->shaped<float, 4>(shape));
+  }
+};
+REGISTER_KERNEL_BUILDER(Name("AdjustContrastv2").Device(DEVICE_SYCL),
+                        AdjustContrastOpv2<SYCLDevice>);
+#endif
 
 }  // namespace tensorflow
