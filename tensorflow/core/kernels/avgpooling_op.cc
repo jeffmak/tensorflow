@@ -772,14 +772,14 @@ public:
   Padding padding_;
   TensorFormat data_format_;
 };
-// #define REGISTER_SYCL_KERNEL(T)                                 \
-//   REGISTER_KERNEL_BUILDER(Name("AvgPoolGrad")                   \
-//                               .Device(DEVICE_SYCL)              \
-//                               .TypeConstraint<T>("T")           \
-//                               .HostMemory("orig_input_shape"),  \
-//                           AvgPoolingGradOp<SYCLDevice, T>);
+#define REGISTER_SYCL_KERNEL(T)                                 \
+  REGISTER_KERNEL_BUILDER(Name("AvgPoolGrad")                   \
+                              .Device(DEVICE_SYCL)              \
+                              .TypeConstraint<T>("T")           \
+                              .HostMemory("orig_input_shape"),  \
+                          AvgPoolingGradOp<SYCLDevice, T>);
 
-// TF_CALL_float(REGISTER_SYCL_KERNEL);
-// TF_CALL_double(REGISTER_SYCL_KERNEL);
+TF_CALL_float(REGISTER_SYCL_KERNEL);
+TF_CALL_double(REGISTER_SYCL_KERNEL);
 #endif  // TENSORFLOW_USE_SYCL
 }  // namespace tensorflow
