@@ -20,6 +20,7 @@ limitations under the License.
 #include "tensorflow/core/framework/tensor_types.h"
 #include "tensorflow/core/kernels/eigen_pooling.h"
 #include "tensorflow/core/platform/types.h"
+#include <iostream>
 
 namespace tensorflow {
 namespace functor {

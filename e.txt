@@ -1,0 +1,12 @@
+____Loading complete.  Analyzing...
+____Found 1 test target...
+____Building...
+____[68 / 111] SWIGing tensorflow/python/tensorflow.i
+
+Bazel caught interrupt signal; shutting down.
+
+ERROR: /home/jeffrey/work/tensorflow/tensorflow/core/kernels/BUILD:2899:1: C++ compilation of rule '//tensorflow/core/kernels:pooling_ops' failed: computecpp failed: error executing command external/local_config_sycl/crosstool/computecpp -Wall -msse3 -g0 -O2 -DNDEBUG '-std=c++11' -MD -MF ... (remaining 130 argument(s) skipped): com.google.devtools.build.lib.shell.AbnormalTerminationException: Process terminated by signal 15.
+Target //tensorflow/python/kernel_tests:pooling_ops_test failed to build
+Use --verbose_failures to see the command lines of failed build steps.
+ERROR: build interrupted.
+____Elapsed time: 9.320s, Critical Path: 9.06s

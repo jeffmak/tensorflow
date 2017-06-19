@@ -209,6 +209,9 @@ class AvgPoolingOp<SYCLDevice, T> : public UnaryOp<T> {
     OP_REQUIRES_OK(context, context->GetAttr("data_format", &data_format));
     OP_REQUIRES(context, FormatFromString(data_format, &data_format_),
                 errors::InvalidArgument("Invalid data format"));
+    OP_REQUIRES(
+        context, data_format_ == FORMAT_NHWC,
+        errors::InvalidArgument("OpenCL AvgPoolingOp only supports NHWC."));
     OP_REQUIRES_OK(context, context->GetAttr("ksize", &ksize_));
     OP_REQUIRES(context, ksize_.size() == 4,
                 errors::InvalidArgument("Sliding window ksize field must "
@@ -678,16 +681,16 @@ struct LaunchAvgPoolingGradOpSYCL {
         bcast.set(1, csize);
         bcast.set(2, rsize);
 #endif
-        Eigen::Tensor<T, 4, Eigen::RowMajor> slices(src_sizes);
-        slices.device(context->eigen_cpu_device()) =
+
+        auto slices =
             out_backprop.tensor<T, 4>().slice(src_indices, src_sizes);
         // Divide by the size of the actual patch (rsize * csize).
         float divide_size = rsize * csize * 1.0f;
-        slices *= slices.constant(1.0f / divide_size);
+        auto slices_multiplied = slices * slices.constant(1.0f / divide_size);
 
         output->tensor<T, 4>()
             .slice(dst_indices, dst_sizes)
-            .device(context->eigen_cpu_device()) += slices.broadcast(bcast);
+            .device(context->eigen_sycl_device()) += slices_multiplied.broadcast(bcast);
       }
     }
   }
@@ -769,14 +772,14 @@ public:
   Padding padding_;
   TensorFormat data_format_;
 };
-#define REGISTER_SYCL_KERNEL(T)                                 \
-  REGISTER_KERNEL_BUILDER(Name("AvgPoolGrad")                   \
-                              .Device(DEVICE_SYCL)              \
-                              .TypeConstraint<T>("T")           \
-                              .HostMemory("orig_input_shape"),  \
-                          AvgPoolingGradOp<SYCLDevice, T>);
+// #define REGISTER_SYCL_KERNEL(T)                                 \
+//   REGISTER_KERNEL_BUILDER(Name("AvgPoolGrad")                   \
+//                               .Device(DEVICE_SYCL)              \
+//                               .TypeConstraint<T>("T")           \
+//                               .HostMemory("orig_input_shape"),  \
+//                           AvgPoolingGradOp<SYCLDevice, T>);
 
-TF_CALL_float(REGISTER_SYCL_KERNEL);
-TF_CALL_double(REGISTER_SYCL_KERNEL);
+// TF_CALL_float(REGISTER_SYCL_KERNEL);
+// TF_CALL_double(REGISTER_SYCL_KERNEL);
 #endif  // TENSORFLOW_USE_SYCL
 }  // namespace tensorflow

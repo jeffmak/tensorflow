@@ -31,6 +31,7 @@ from tensorflow.python.ops import gradients_impl
 from tensorflow.python.ops import nn_ops
 import tensorflow.python.ops.nn_grad  # pylint: disable=unused-import
 from tensorflow.python.platform import test
+from tensorflow.core.protobuf import config_pb2
 
 
 def GetTestConfigs():
@@ -39,7 +40,8 @@ def GetTestConfigs():
   Returns:
     all the valid test configs as tuples of data_format and use_gpu.
   """
-  test_configs = [("NHWC", False), ("NHWC", True)]
+  test_configs = [#("NHWC", False), 
+  ("NHWC", True)]
   if test.is_gpu_available(cuda_only=True):
     # "NCHW" format is currently supported exclusively on CUDA GPUs.
     test_configs += [("NCHW", True)]
@@ -97,7 +99,7 @@ class PoolingTest(test.TestCase):
     # Initializes the input tensor with array containing incrementing
     # numbers from 1.
     x = [f * 1.0 for f in range(1, total_size + 1)]
-    with self.test_session(use_gpu=use_gpu):
+    with self.test_session(use_gpu=use_gpu,config=config_pb2.ConfigProto(log_device_placement=True)):
       t = constant_op.constant(x, shape=input_sizes, dtype=data_type)
       if data_format == "NCHW":
         t = test_util.NHWCToNCHW(t)
@@ -497,7 +499,7 @@ class PoolingTest(test.TestCase):
                                          strides,
                                          error_msg,
                                          use_gpu=False):
-    with self.test_session(use_gpu=use_gpu):
+    with self.test_session(use_gpu=use_gpu,config=config_pb2.ConfigProto(log_device_placement=True)):
       t = constant_op.constant(1.0, shape=in_size)
       with self.assertRaisesRegexp(errors_impl.UnimplementedError, error_msg):
         t = nn_ops.max_pool(
@@ -513,7 +515,7 @@ class PoolingTest(test.TestCase):
     self._testDepthwiseMaxPoolInvalidConfig([1, 2, 2, 4], [1, 1, 1, 3],
                                             [1, 1, 1, 3], "evenly divide")
     if test.is_gpu_available():
-      with self.test_session(use_gpu=True):
+      with self.test_session(use_gpu=True,config=config_pb2.ConfigProto(log_device_placement=True)):
         t = constant_op.constant(1.0, shape=[1, 2, 2, 4])
         with self.assertRaisesOpError("for CPU devices"):
           nn_ops.max_pool(
@@ -525,11 +527,11 @@ class PoolingTest(test.TestCase):
   def _CompareMaxPoolingFwd(self, input_shape, ksize, strides, padding):
     for dtype in np.float64, np.float32, np.float16:
       tensor_input = np.random.rand(*input_shape).astype(dtype)
-      with self.test_session(use_gpu=True):
+      with self.test_session(use_gpu=True,config=config_pb2.ConfigProto(log_device_placement=True)):
         t = constant_op.constant(tensor_input, shape=input_shape)
         out_op, _ = nn_ops.max_pool_with_argmax(t, ksize, strides, padding)
         gpu_val = out_op.eval()
-      with self.test_session(use_gpu=False):
+      with self.test_session(use_gpu=False,config=config_pb2.ConfigProto(log_device_placement=True)):
         t = constant_op.constant(tensor_input, shape=input_shape)
         out_op = nn_ops.max_pool(t, ksize, strides, padding)
         cpu_val = out_op.eval()
@@ -542,7 +544,7 @@ class PoolingTest(test.TestCase):
       # in the input.
       tensor_input = np.random.random_integers(0, 3, input_shape).astype(dtype)
       tensor_output = np.random.rand(*output_shape).astype(dtype)
-      with self.test_session(use_gpu=True):
+      with self.test_session(use_gpu=True,config=config_pb2.ConfigProto(log_device_placement=True)):
         t = constant_op.constant(tensor_input, shape=input_shape)
         _, argmax_op = nn_ops.max_pool_with_argmax(t, ksize, strides, padding)
         argmax = argmax_op.eval()
@@ -551,7 +553,7 @@ class PoolingTest(test.TestCase):
                                                        ksize, strides, padding)
         gpu_val = out_op.eval()
         self.assertShapeEqual(gpu_val, out_op)
-      with self.test_session(use_gpu=False):
+      with self.test_session(use_gpu=False,config=config_pb2.ConfigProto(log_device_placement=True)):
         t = constant_op.constant(tensor_input, shape=input_shape)
         out_op = nn_ops.max_pool(t, ksize, strides, padding)
         orig_out = out_op.eval()
@@ -571,7 +573,7 @@ class PoolingTest(test.TestCase):
       # Generate numbers in a narrow range, so that there are many duplicates
       # in the input.
       tensor_input = np.random.random_integers(0, 3, input_shape).astype(dtype)
-      with self.test_session(use_gpu=True):
+      with self.test_session(use_gpu=True,config=config_pb2.ConfigProto(log_device_placement=True)):
         t = constant_op.constant(tensor_input, shape=input_shape)
         _, argmax_op = nn_ops.max_pool_with_argmax(t, ksize, strides, padding)
         argmax = argmax_op.eval()
@@ -580,7 +582,7 @@ class PoolingTest(test.TestCase):
             t, grad_in, argmax, ksize, strides, padding)
         gpu_val = out_op.eval()
         self.assertShapeEqual(gpu_val, out_op)
-      with self.test_session(use_gpu=False):
+      with self.test_session(use_gpu=False,config=config_pb2.ConfigProto(log_device_placement=True)):
         t = constant_op.constant(tensor_input, shape=input_shape)
         out_op = nn_ops.max_pool(t, ksize, strides, padding)
         orig_out = out_op.eval()
@@ -599,7 +601,7 @@ class PoolingTest(test.TestCase):
     if not test.is_gpu_available(cuda_only=True):
       return
     tensor_input = [1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0]
-    with self.test_session(use_gpu=True) as sess:
+    with self.test_session(use_gpu=True,config=config_pb2.ConfigProto(log_device_placement=True)) as sess:
       t = constant_op.constant(tensor_input, shape=[1, 3, 3, 1])
       out_op, argmax_op = nn_ops.max_pool_with_argmax(
           t,
@@ -620,7 +622,7 @@ class PoolingTest(test.TestCase):
     orig_input = [1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0]
     tensor_input = [11.0, 12.0, 13.0, 14.0]
     tensor_argmax = list(np.array([0, 1, 3, 5], dtype=np.int64))
-    with self.test_session(use_gpu=True):
+    with self.test_session(use_gpu=True,config=config_pb2.ConfigProto(log_device_placement=True)):
       orig_in = constant_op.constant(orig_input, shape=[1, 3, 3, 1])
       t = constant_op.constant(tensor_input, shape=[1, 2, 2, 1])
       argmax = constant_op.constant(
@@ -643,7 +645,7 @@ class PoolingTest(test.TestCase):
     orig_input = [1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0]
     tensor_input = [11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0]
     tensor_argmax = list(np.array([0, 1, 3, 5], dtype=np.int64))
-    with self.test_session(use_gpu=True):
+    with self.test_session(use_gpu=True,config=config_pb2.ConfigProto(log_device_placement=True)):
       orig_in = constant_op.constant(orig_input, shape=[1, 3, 3, 1])
       t = constant_op.constant(tensor_input, shape=[1, 3, 3, 1])
       argmax = constant_op.constant(
@@ -694,7 +696,7 @@ class PoolingTest(test.TestCase):
     # Initializes the input tensor with array containing incrementing
     # numbers from 1.
     x = [f * 1.0 for f in range(1, total_size + 1)]
-    with self.test_session(use_gpu=use_gpu):
+    with self.test_session(use_gpu=use_gpu,config=config_pb2.ConfigProto(log_device_placement=True)):
       input_tensor = constant_op.constant(x, shape=input_sizes, name="input")
       if pool_func == nn_ops.avg_pool:
         func_name = "avg_pool"
@@ -770,7 +772,7 @@ class PoolingTest(test.TestCase):
     # Initializes the input tensor with array containing incrementing
     # numbers from 1.
     x = [f * 1.0 for f in range(1, total_size + 1)]
-    with self.test_session(use_gpu=use_gpu):
+    with self.test_session(use_gpu=use_gpu,config=config_pb2.ConfigProto(log_device_placement=True)):
       input_tensor = constant_op.constant(x, shape=input_sizes, name="input")
       if pool_func == nn_ops.avg_pool:
         func_name = "avg_pool"
@@ -952,7 +954,7 @@ class PoolingTest(test.TestCase):
                              expected_input_backprop, input_sizes, output_sizes,
                              window_rows, window_cols, row_stride, col_stride,
                              padding, use_gpu):
-    with self.test_session(use_gpu=use_gpu):
+    with self.test_session(use_gpu=use_gpu,config=config_pb2.ConfigProto(log_device_placement=True)):
       input_tensor = constant_op.constant(input_data, shape=input_sizes)
       output_tensor = nn_ops.max_pool(input_tensor,
                                       [1, window_rows, window_cols, 1],
@@ -1457,7 +1459,7 @@ class PoolingTest(test.TestCase):
             padding="SAME")
 
   def testOpEdgeCases(self):
-    with self.test_session() as sess:
+    with self.test_session(config=config_pb2.ConfigProto(log_device_placement=True)) as sess:
       pool_funcs = [nn_ops.max_pool, nn_ops.avg_pool]
       # MaxPoolWithArgMax is implemented only on CUDA.
       if test.is_gpu_available(cuda_only=True):
