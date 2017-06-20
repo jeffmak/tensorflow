@@ -643,6 +643,7 @@ class BaseSession(SessionInterface):
     Returns:
       A list of devices in the session.
     """
+    print("session: "+str(self._session))
     with errors.raise_exception_on_not_ok_status() as status:
       if self._created_with_new_api:
         raw_device_list = tf_session.TF_SessionListDevices(
@@ -658,6 +659,7 @@ class BaseSession(SessionInterface):
         memory = tf_session.TF_DeviceListMemoryBytes(raw_device_list, i, status)
         device_list.append(_DeviceAttributes(name, device_type, memory))
       tf_session.TF_DeleteDeviceList(raw_device_list)
+      print("size: "+str(size)+str(device_list))
       return device_list
 
   def close(self):

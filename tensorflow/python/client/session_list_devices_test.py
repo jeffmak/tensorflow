@@ -34,6 +34,7 @@ class SessionListDevicesTestMethods(object):
   def testListDevices(self):
     with session.Session() as sess:
       devices = sess.list_devices()
+      print("yo mama: "+str(set([d.name for d in devices])))
       self.assertTrue('/job:localhost/replica:0/task:0/device:CPU:0' in set(
           [d.name for d in devices]), devices)
       self.assertGreaterEqual(1, len(devices), devices)

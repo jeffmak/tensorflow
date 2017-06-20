@@ -429,7 +429,7 @@ struct ResizeBilinearGrad<CPUDevice, T> {
 };
 }  // namespace functor
 
-#ifdef TENSORFLOW_USE_SYCL
+// #ifdef TENSORFLOW_USE_SYCL
 // namespace functor {
 // template <typename T>
 // struct ResizeBilinearGrad<SYCLDevice, T> {
@@ -485,7 +485,7 @@ struct ResizeBilinearGrad<CPUDevice, T> {
 //   }
 // };
 // }  // namespace functor
-#endif
+// #endif
 
 #define REGISTER_KERNEL(T)                            \
   REGISTER_KERNEL_BUILDER(Name("ResizeBilinear")      \
