@@ -432,6 +432,6 @@ class AdjustContrastOpv2<SYCLDevice> : public AdjustContrastOpV2Base {
 };
 REGISTER_KERNEL_BUILDER(Name("AdjustContrastv2").Device(DEVICE_SYCL),
                         AdjustContrastOpv2<SYCLDevice>);
-#endif
+#endif  // TENSORFLOW_USE_SYCL
 
 }  // namespace tensorflow
