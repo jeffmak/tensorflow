@@ -37,6 +37,7 @@ limitations under the License.
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/platform/prefetch.h"
 #include "tensorflow/core/util/strided_slice_op.h"
+#include <iostream>
 
 namespace tensorflow {
 namespace {
@@ -85,6 +86,7 @@ class StridedSliceOp : public OpKernel {
     OP_REQUIRES_OK(context, context->GetAttr("new_axis_mask", &new_axis_mask));
     OP_REQUIRES_OK(context,
                    context->GetAttr("shrink_axis_mask", &shrink_axis_mask));
+    std::cout << "masks: " << begin_mask << " " << end_mask << std::endl;
   }
 
   void Compute(OpKernelContext* context) override {
@@ -108,6 +110,9 @@ class StridedSliceOp : public OpKernel {
                      &slice_dim0, &begin, &end, &strides));
 
     const Tensor& input = context->input(0);
+    std::cout << begin[0] << " " << end[0] << std::endl;
+    std::cout << begin[1] << " " << end[1] << std::endl;
+    std::cout << begin[2] << " " << end[2] << std::endl;
 
     // Optimization #1, slice is a no-op plus reshape
     if (is_identity) {
@@ -119,7 +124,7 @@ class StridedSliceOp : public OpKernel {
     }
 
 // This optimization is currently not applicable for SYCL devices
-#ifndef TENSORFLOW_USE_SYCL
+// #ifndef TENSORFLOW_USE_SYCL
     // Optimization #2, slice is memory contiguous (only occurs in dim 0)
     if (slice_dim0 && IsDim0SliceAligned<T>(input.shape(), begin[0], end[0])) {
       CHECK_GE(input.dims(), 1);  // Otherwise, is_identity should be true.
@@ -129,7 +134,7 @@ class StridedSliceOp : public OpKernel {
       context->set_output(0, tmp);
       return;
     }
-#endif  // TENSORFLOW_USE_SYCL
+// #endif  // TENSORFLOW_USE_SYCL
 
     Tensor* result = nullptr;
     OP_REQUIRES_OK(context, context->allocate_output(0, final_shape, &result));
@@ -142,7 +147,7 @@ class StridedSliceOp : public OpKernel {
       // TODO(aselle): Here we are restricting to processing_shape and
       // final_shape being 2D. This isn't strictly necessary, but I don't
       // want to blow up code gen size, because to shape<> you need static
-      // NDIM and T
+      // NDIM and
       if (is_simple_slice && std::is_same<Device, CPUDevice>::value &&
           input_dims == 2 && processing_shape.dims() == 2 &&
           final_shape.dims() == 2) {
@@ -154,6 +159,7 @@ class StridedSliceOp : public OpKernel {
 
 #define HANDLE_DIM(NDIM)                                                       \
   if (processing_dims == NDIM) {                                               \
+    printf("%d\n",processing_dims);                                            \
     HandleStridedSliceCase<Device, T, NDIM>(context, begin, end, strides,      \
                                             processing_shape, is_simple_slice, \
                                             result);                           \

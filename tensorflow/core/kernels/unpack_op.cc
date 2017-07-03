@@ -26,6 +26,7 @@ limitations under the License.
 #include "tensorflow/core/kernels/split_lib.h"
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
+#include <iostream>
 
 namespace tensorflow {
 
@@ -76,8 +77,11 @@ class UnpackOp : public OpKernel {
     // because if the immediate consumer of the resulting tensors are
     // not using eigen for computation, its perfectly fine to avoid
     // the copying.
+    #ifndef TENSORFLOW_USE_SYCL
+    printf("seriously\n");
     if (axis == 0 &&
         (output_size == 0 || IsInnerDimsSizeAligned<T>(input_shape))) {
+          printf("seriously damn\n");
       for (int i = 0; i < num; ++i) {
         Tensor output;
         CHECK(output.CopyFrom(input.Slice(i, i + 1), output_shape));
@@ -85,6 +89,7 @@ class UnpackOp : public OpKernel {
       }
       return;
     }
+    #endif  // TENSORFLOW_USE_SYCL
 
     int64 before_dim = 1;
     for (int i = 0; i < axis; ++i) {
@@ -103,11 +108,13 @@ class UnpackOp : public OpKernel {
         input.shaped<T, 3>({1, before_dim, axis_dim * after_dim});
 
     for (int i = 0; i < num; ++i) {
+      printf("bro\n");
       Tensor* output;
       OP_REQUIRES_OK(context,
                      context->allocate_output(i, output_shape, &output));
 
       if (output_shape.num_elements() > 0) {
+        printf("hello\n");
         auto output_shaped = output->shaped<T, 3>({1, before_dim, after_dim});
         Eigen::DSizes<Eigen::DenseIndex, 3> indices{0, 0, i * after_dim};
         Eigen::DSizes<Eigen::DenseIndex, 3> sizes{1, before_dim, after_dim};
@@ -115,6 +122,7 @@ class UnpackOp : public OpKernel {
                                     output_shaped, input_reshaped, indices,
                                     sizes);
       }
+      std::cout << "tval: " << i << " "<< (*output).SummarizeValue(12) << std::endl;
     }
   }
 

@@ -30,6 +30,7 @@ limitations under the License.
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/core/platform/types.h"
+#include <iostream>
 
 namespace tensorflow {
 
@@ -101,7 +102,7 @@ class HSVToRGBOp : public OpKernel {
 
     typename TTypes<T, 2>::ConstTensor input_data = input.flat_inner_dims<T>();
     typename TTypes<T, 2>::Tensor output_data = output->flat_inner_dims<T>();
-
+    std::cout << "input data: " << input_data(0,0) << std::endl;
     functor::HSVToRGB<Device, T>()(context->eigen_device<Device>(), input_data,
                                    output_data);
   }

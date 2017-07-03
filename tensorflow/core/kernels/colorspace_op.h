@@ -19,6 +19,7 @@ limitations under the License.
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/framework/tensor_shape.h"
 #include "tensorflow/core/framework/tensor_types.h"
+#include <iostream>
 
 namespace tensorflow {
 
@@ -44,11 +45,20 @@ struct RGBToHSV {
     Eigen::IndexList<Eigen::type2index<1> > channel_axis;
 #endif
 
+// #ifdef TENSORFLOW_USE_SYCL
+//
+// #else
+//
+// #endif
     V.device(d) = input_data.maximum(channel_axis);
+    std::cout.precision(15);
+    std::cout << "V: " << output_data(0,2) << std::endl;
 
     range.device(d) = V - input_data.minimum(channel_axis);
+    std::cout << "range: " << range(0) << std::endl;
 
     S.device(d) = (V > T(0)).select(range / V, V.constant(T(0)));
+    std::cout << "S: " << output_data(0,2) << std::endl;
 
     auto norm = range.inverse() * (T(1) / T(6));
     // TODO(wicke): all these assignments are only necessary because a combined
@@ -58,8 +68,12 @@ struct RGBToHSV {
                                   (G == V).select(
                                       norm * (B - R) + T(2) / T(6),
                                       norm * (R - G) + T(4) / T(6)));
+    std::cout << "H1: " << output_data(0,0) << std::endl;
     H.device(d) = (range > T(0)).select(H, H.constant(T(0)));
+    std::cout << "H2: " << output_data(0,0) << std::endl;
     H.device(d) = (H < T(0)).select(H + T(1), H);
+    std::cout << "H3: " << output_data(0,0) << std::endl;
+
   }
 };
 

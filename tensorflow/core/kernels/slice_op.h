@@ -43,6 +43,9 @@ struct Slice {
       }
       To32Bit(output).device(d) = To32Bit(input).slice(indices, sizes);
     } else {
+      printf("aha!\n");
+      printf("indices: %ld %ld\n",slice_indices[0],slice_indices[1]);
+      printf("size: %ld\n",slice_sizes[0]);
       output.device(d) = input.slice(slice_indices, slice_sizes);
     }
   }

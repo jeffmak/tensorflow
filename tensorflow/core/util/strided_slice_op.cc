@@ -181,6 +181,9 @@ Status ValidateStridedSliceOp(
     bool* is_simple_slice, bool* slice_dim0,
     gtl::InlinedVector<int64, 4>* begin, gtl::InlinedVector<int64, 4>* end,
     gtl::InlinedVector<int64, 4>* strides) {
+
+
+  std::cout << "god: " << (*begin)[0] << " " << (*end)[0] << std::endl;
   const bool begin_is_wrong =
       begin_tensor != nullptr &&
       !(TensorShapeUtils::IsVector(begin_tensor->shape()) &&
@@ -244,6 +247,8 @@ Status ValidateStridedSliceOp(
     sparse_spec.dims++;  // this effects loop iteration below
   }
 
+
+
   // Step 2: Make a sparse spec into a full index spec
   //
   // The sparse spec does not corresopnds to the number of dimensions
@@ -261,7 +266,7 @@ Status ValidateStridedSliceOp(
                                       *begin,
                                       *end,
                                       *strides};
-
+  std::cout << "godx: " << (*begin)[0] << " " << (*end)[0] << std::endl;
   if (strides_tensor.dtype() == DT_INT32) {
     TF_RETURN_IF_ERROR(BuildDenseSpec<int32>(sparse_spec, &dense_spec));
   } else if (strides_tensor.dtype() == DT_INT64) {
@@ -269,6 +274,8 @@ Status ValidateStridedSliceOp(
   } else {
     LOG(FATAL) << "begin must be either int32 or int64";
   }
+
+  std::cout << "god: " << (*begin)[0] << " " << (*end)[0] << std::endl;
 
   // Step 3: Make implicit ranges (non-zero begin_masks and end_masks) explicit
   //         and bounds check!

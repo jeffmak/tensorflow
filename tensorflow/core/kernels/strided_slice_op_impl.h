@@ -32,6 +32,7 @@ limitations under the License.
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/lib/gtl/array_slice.h"
 #include "tensorflow/core/platform/mem.h"
+#include <iostream>
 
 namespace tensorflow {
 
@@ -84,6 +85,8 @@ void HandleStridedSliceCase(OpKernelContext* context,
 
   gtl::InlinedVector<int64, 4> processing_dims = processing_shape.dim_sizes();
   if (is_simple_slice) {
+    printf("simple slice\n");
+    std::cout << begin[0] << " " << end[0] << std::endl;
     Eigen::DSizes<Eigen::DenseIndex, NDIM> begin_di;
     Eigen::DSizes<Eigen::DenseIndex, NDIM> sizes_di;
     for (int i = 0; i < NDIM; ++i) {
@@ -95,6 +98,7 @@ void HandleStridedSliceCase(OpKernelContext* context,
         result->bit_casted_shaped<Proxy, NDIM>(processing_dims),
         context->input(0).bit_casted_tensor<Proxy, NDIM>(), begin_di, sizes_di);
   } else {
+    printf("not simple slice\n");
     Eigen::DSizes<Eigen::DenseIndex, NDIM> begin_di;
     Eigen::DSizes<Eigen::DenseIndex, NDIM> end_di;
     Eigen::DSizes<Eigen::DenseIndex, NDIM> strides_di;
