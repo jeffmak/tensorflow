@@ -44,6 +44,7 @@ limitations under the License.
 #include "tensorflow/core/util/padding.h"
 #include "tensorflow/core/util/tensor_format.h"
 #include "tensorflow/core/util/use_cudnn.h"
+#include <iostream>
 
 #if GOOGLE_CUDA
 #include "tensorflow/core/kernels/conv_ops_gpu.h"
@@ -80,7 +81,7 @@ struct LaunchGeneric {
       for (int i = 0; i < 3; ++i) {
         conv_width *= output->dim_size(i);
       }
-
+      std::cout << "single" << std::endl;
       Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1> dim_pair;
       dim_pair[0] = Eigen::IndexPair<Eigen::DenseIndex>(1, 0);
       functor::MatMulConvFunctor<Device, T>()(
@@ -94,6 +95,7 @@ struct LaunchGeneric {
                padding == Eigen::PADDING_VALID) {
       // If the input data and filter have the same height/width,
       // the 2D convolution is reduced to matrix multiplication.
+      std::cout << "valid padding" << std::endl;
       const int k =  // Length of reduction dimension.
           filter.dim_size(0) * filter.dim_size(1) * filter.dim_size(2);
 
@@ -105,10 +107,78 @@ struct LaunchGeneric {
           input.shaped<T, 2>({input.dim_size(0), k}),
           filter.shaped<T, 2>({k, filter.dim_size(3)}), dim_pair);
     } else {
+      if(padding == Eigen::PADDING_SAME){
+        std::cout << "same padding" << std::endl;
+      }
+      std::cout.precision(15);
+      std::cout << "other" << std::endl;
+      std::cout << input.SummarizeValue(50) << std::endl;
       functor::SpatialConvolution<Device, T>()(
           ctx->eigen_device<Device>(), output->tensor<T, 4>(),
           input.tensor<T, 4>(), filter.tensor<T, 4>(), row_stride, col_stride,
           padding);
+      std::cout << output->SummarizeValue(50) << std::endl;
+    }
+  }
+
+
+
+  static void launch_debug(OpKernelContext* ctx, const Tensor& input,
+                     const Tensor& filter, int row_stride, int col_stride,
+                     const Eigen::PaddingType& padding, Tensor* output,
+                     Tensor* inter, Tensor* interC, Tensor* kernelR, TensorFormat data_format) {
+    CHECK(data_format == FORMAT_NHWC) << "Generic conv implementation only "
+                                         "supports NHWC tensor format for now.";
+    if (filter.dim_size(0) == 1 && filter.dim_size(1) == 1 && row_stride == 1 &&
+        col_stride == 1) {
+      // For 1x1 kernel, the 2D convolution is reduced to matrix
+      // multiplication.
+      //
+      // TODO(vrv): We should be able to call SpatialConvolution
+      // and it will produce the same result, but doing so
+      // led to NaNs during training.  Using matmul instead for now.
+      int conv_width = 1;  // Width for the convolution step.
+      for (int i = 0; i < 3; ++i) {
+        conv_width *= output->dim_size(i);
+      }
+      std::cout << "single" << std::endl;
+      Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1> dim_pair;
+      dim_pair[0] = Eigen::IndexPair<Eigen::DenseIndex>(1, 0);
+      functor::MatMulConvFunctor<Device, T>()(
+          ctx->eigen_device<Device>(),
+          output->shaped<T, 2>({conv_width, filter.dim_size(3)}),
+          input.shaped<T, 2>({conv_width, filter.dim_size(2)}),
+          filter.shaped<T, 2>({filter.dim_size(2), filter.dim_size(3)}),
+          dim_pair);
+    } else if (filter.dim_size(0) == input.dim_size(1) &&
+               filter.dim_size(1) == input.dim_size(2) &&
+               padding == Eigen::PADDING_VALID) {
+      // If the input data and filter have the same height/width,
+      // the 2D convolution is reduced to matrix multiplication.
+      std::cout << "valid padding" << std::endl;
+      const int k =  // Length of reduction dimension.
+          filter.dim_size(0) * filter.dim_size(1) * filter.dim_size(2);
+
+      Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1> dim_pair;
+      dim_pair[0] = Eigen::IndexPair<Eigen::DenseIndex>(1, 0);
+      functor::MatMulConvFunctor<Device, T>()(
+          ctx->eigen_device<Device>(),
+          output->shaped<T, 2>({input.dim_size(0), filter.dim_size(3)}),
+          input.shaped<T, 2>({input.dim_size(0), k}),
+          filter.shaped<T, 2>({k, filter.dim_size(3)}), dim_pair);
+    } else {
+      if(padding == Eigen::PADDING_SAME){
+        std::cout << "same padding" << std::endl;
+      }
+      std::cout.precision(15);
+      std::cout << "other" << std::endl;
+      std::cout << input.SummarizeValue(50) << std::endl;
+      functor::SpatialConvolutionDebug<Device, T>()(
+          ctx->eigen_device<Device>(), inter->tensor<T, 2>(),
+          interC->tensor<T, 4>(), kernelR->tensor<T, 2>(), output->tensor<T, 4>(),
+          input.tensor<T, 4>(), filter.tensor<T, 4>(), row_stride, col_stride,
+          padding);
+      std::cout << output->SummarizeValue(50) << std::endl;
     }
   }
 };
@@ -131,6 +201,20 @@ class LaunchConv2DOp<CPUDevice, T> {
                                         col_stride, padding, output,
                                         data_format);
   }
+  void launch_debug(OpKernelContext* ctx, bool use_cudnn, bool cudnn_use_autotune,
+              const Tensor& input, const Tensor& filter, int row_stride,
+              int col_stride, const Eigen::PaddingType& padding, Tensor* output,
+              Tensor* inter, Tensor* interC, Tensor* kernelR, TensorFormat data_format) {
+    if (data_format != FORMAT_NHWC) {
+      ctx->SetStatus(
+          errors::Unimplemented("Generic conv implementation only supports "
+                                "NHWC tensor format for now."));
+      return;
+    }
+    LaunchGeneric<CPUDevice, T>::launch_debug(ctx, input, filter, row_stride,
+                                        col_stride, padding, output,
+                                        inter, interC, kernelR, data_format);
+  }
 };
 
 #ifdef TENSORFLOW_USE_SYCL
@@ -150,6 +234,20 @@ class LaunchConv2DOp<SYCLDevice, T> {
     LaunchGeneric<SYCLDevice, T>::launch(ctx, input, filter, row_stride,
                                         col_stride, padding, output,
                                         data_format);
+  }
+  void launch_debug(OpKernelContext* ctx, bool use_cudnn, bool cudnn_use_autotune,
+              const Tensor& input, const Tensor& filter, int row_stride,
+              int col_stride, const Eigen::PaddingType& padding, Tensor* output,
+              Tensor* inter, Tensor* interC, Tensor* kernelR, TensorFormat data_format) {
+    if (data_format != FORMAT_NHWC) {
+      ctx->SetStatus(
+          errors::Unimplemented("SYCL conv implementation only supports "
+                                "NHWC tensor format for now."));
+      return;
+    }
+    LaunchGeneric<SYCLDevice, T>::launch_debug(ctx, input, filter, row_stride,
+                                        col_stride, padding, output,
+                                        inter, interC, kernelR, data_format);
   }
 };
 #endif // TENSORFLOW_USE_SYCL
@@ -379,8 +477,37 @@ class Conv2DOp : public BinaryOp<T> {
 
     // Output tensor is of the following dimensions:
     // [ in_batch, out_rows, out_cols, out_depth ]
+
+    // std::cout << "image_patch_out_dim: " << input.dimensions()[0] << " "
+    //           << kernelCols << " " << kernelRows << " "
+    //           << kernelChannels << std::endl;
+    TensorShape inter_shape = {{8, 16}};
+    Tensor inter;
+    OP_REQUIRES_OK(context, context->allocate_temp(DT_FLOAT, inter_shape, &inter));
+
+    TensorShape interC_shape = {{1, 2, 4, 2}};
+    Tensor interC;
+    OP_REQUIRES_OK(context, context->allocate_temp(DT_FLOAT, interC_shape, &interC));
+
+    TensorShape kernelR_shape = {{16, 2}};
+    Tensor kernelR;
+    OP_REQUIRES_OK(context, context->allocate_temp(DT_FLOAT, kernelR_shape, &kernelR));
+
     Tensor* output = nullptr;
     OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
+
+    std::cout << "Conv2D: in_depth = " << in_depth
+            << ", input_cols = " << input_cols
+            << ", filter_cols = " << filter_cols
+            << ", input_rows = " << input_rows
+            << ", filter_rows = " << filter_rows
+            << ", stride_rows = " << stride_rows
+            << ", stride_cols = " << stride_cols
+            << ", out_depth = " << out_depth
+            << ", pad_rows = " << pad_rows
+            << ", pad_cols = " << pad_cols
+            << ", out_rows = " << out_rows
+            << ", out_cols = " << out_cols << std::endl;
 
     VLOG(2) << "Conv2D: in_depth = " << in_depth
             << ", input_cols = " << input_cols
@@ -411,10 +538,17 @@ class Conv2DOp : public BinaryOp<T> {
             out_depth, stride_rows, stride_cols, output, data_format_)) {
       return;
     }
-
-    launcher_.launch(context, use_cudnn_, cudnn_use_autotune_, input, filter,
+    std::cout << "padding_: " << padding_ << std::endl;
+    launcher_.launch_debug(context, use_cudnn_, cudnn_use_autotune_, input, filter,
                      stride_rows, stride_cols,
-                     BrainPadding2EigenPadding(padding_), output, data_format_);
+                     BrainPadding2EigenPadding(padding_), output, &inter, &interC, &kernelR ,data_format_);
+    std::cout << "Tensors" << std::endl;
+    std::cout << inter.SummarizeValue(128) << std::endl;
+    std::cout << std::endl;
+    std::cout << kernelR.SummarizeValue(40) << std::endl;
+    std::cout << std::endl;
+    std::cout << interC.SummarizeValue(40) << std::endl;
+    // std::cout << std::endl << "Dimensions" << std::endl;
   }
 
  private:

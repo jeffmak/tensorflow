@@ -58,7 +58,102 @@ void SpatialConvolutionFunc(const Device& d, Output output, Input input,
   // Need to swap row/col when calling Eigen.
   output.device(d) =
       Eigen::SpatialConvolution(input, filter, col_stride, row_stride, padding);
+  // #ifdef TENSORFLOW_USE_SYCL
+  // if(std::is_same<Device, Eigen::SyclDevice>::value){
+  //   auto buf = d.get_sycl_buffer(&output);
+  //   using namespace cl::sycl;
+  //   auto hA =
+  //     buf.template get_access<access::mode::read, access::target::host_buffer>();
+  //   std::cout << hA[0][0] << std::endl;
+  // }
+  // #endif
+  std::cout << "bonjour" << std::endl;
 }
+
+template <typename Device, typename TensorType>
+struct PrintValues {
+  static void print(const Device& device, const TensorType& tensor, string name, int length){
+    std::cout << name << ":"<< std::endl;
+    const float* ptr = tensor.data();
+    std::cout.precision(20);
+    for(int i=0; i<length; ++i){
+      std::cout << ptr[i] << std::endl;
+    }
+    std::cout << std::endl;
+  }
+};
+
+template <typename TensorType>
+struct PrintValues<Eigen::SyclDevice, TensorType> {
+  static void print(const Eigen::SyclDevice& device, const TensorType& tensor, string name, int length){
+    std::cout << name << ":"<< std::endl;
+    auto buf_input = device.get_sycl_buffer(tensor.data());
+    using namespace cl::sycl;
+    auto hA_i =
+      buf_input.template get_access<access::mode::read, access::target::host_buffer>();
+    auto src_ptr = ConvertToActualTypeSycl(float, hA_i);
+    std::cout.precision(20);
+    for(int i=0; i<length; ++i){
+      if(i%16==0) std::cout << std::endl;
+      std::cout << src_ptr[i] << ", ";
+    }
+    std::cout << std::endl;
+  }
+};
+
+template <typename Device, typename Input, typename InterC, typename KernelR, typename Filter, typename Output, typename Inter>
+void SpatialConvolutionFuncModified(const Device& d,
+      Inter inter, InterC interC, KernelR kernelR, Output output, Input input,
+                            Filter kernel, int row_stride, int col_stride,
+                            const Eigen::PaddingType& padding) {
+  // Need to swap row/col when calling Eigen.
+  // inter.device(d) = Eigen::SpatialConvolutionModified(d, inter, input, kernel, col_stride, row_stride, padding);
+  typedef typename Eigen::internal::traits<Input>::Index TensorIndex;
+  // PrintValues<Device,Input>::print(d,input,"Input",32);
+  // PrintValues<Device,Filter>::print(d,kernel,"Filter",32);
+  inter.device(d) =
+      Eigen::SpatialConvolutionModified(d, inter, input, kernel, col_stride, row_stride, padding);
+  PrintValues<Device,Inter>::print(d,inter,"Inter",128);
+  Eigen::DSizes<TensorIndex, 2> kernel_dims;
+  kernel_dims[0] = 16;
+  kernel_dims[1] = 2;
+  kernelR.device(d) = kernel.reshape(kernel_dims);
+  PrintValues<Device,KernelR>::print(d,kernelR,"KernelR",32);
+  interC.device(d) =
+      Eigen::SpatialConvolutionModified2(d, interC, input, kernel, col_stride, row_stride, padding);
+  PrintValues<Device,InterC>::print(d,interC,"InterC",16);
+  output.device(d) =
+      Eigen::SpatialConvolution(input, kernel, col_stride, row_stride, padding);
+  // PrintValues<Device,Output>::print(d,output,"Output",16);
+
+  // row_stride = col_stride = 1
+  // int64_t kernelRows = 2, kernelCols = 2, row_in_stride = 1, col_in_stride = 1;
+  //
+  // typedef typename Eigen::internal::traits<Input>::Index TensorIndex;
+  // Eigen::DSizes<TensorIndex, 2> kernel_dims;
+  // kernel_dims[0] = 16;
+  // kernel_dims[1] = 2;
+  // Eigen::DSizes<TensorIndex, 2> pre_contract_dims;
+  // pre_contract_dims[0] = 8;
+  // pre_contract_dims[1] = 16;
+  // Eigen::DSizes<TensorIndex, 4> post_contract_dims;
+  // pre_contract_dims[0] = 1;
+  // pre_contract_dims[1] = 2;
+  // pre_contract_dims[2] = 4;
+  // pre_contract_dims[3] = 2;
+  // Eigen::array<Eigen::IndexPair<TensorIndex>, 1> contract_dims;
+  // contract_dims[0] = Eigen::IndexPair<TensorIndex>(1, 0);
+  //
+  // output.device(d) = input
+  //     .extract_image_patches(kernelRows, kernelCols, row_stride, col_stride,
+  //                            row_in_stride, col_in_stride, padding)
+  //     .reshape(pre_contract_dims)
+  //     .contract(kernel.reshape(kernel_dims), contract_dims)
+  //     .reshape(post_contract_dims);
+
+  std::cout << "bonjour" << std::endl;
+}
+
 
 template <typename Device, typename T>
 struct SpatialConvolution {
@@ -68,6 +163,53 @@ struct SpatialConvolution {
                   int col_stride, const Eigen::PaddingType& padding) {
     SpatialConvolutionFunc(d, output, input, filter, row_stride, col_stride,
                            padding);
+  }
+};
+
+template <typename Device, typename T>
+struct SpatialConvolutionDebug {
+  void operator()(const Device& d, typename TTypes<T, 2>::Tensor inter,
+                  typename TTypes<T, 4>::Tensor interC,
+                  typename TTypes<T, 2>::Tensor kernelR,
+                  typename TTypes<T, 4>::Tensor output,
+                  typename TTypes<T, 4>::ConstTensor input,
+                  typename TTypes<T, 4>::ConstTensor filter, int row_stride,
+                  int col_stride, const Eigen::PaddingType& padding) {
+    SpatialConvolutionFuncModified(d, inter, interC, kernelR, output, input, filter, row_stride, col_stride,
+                           padding);
+  }
+};
+
+// #ifdef TENSORFLOW_USE_SYCL
+// template <typename T>
+// struct SpatialConvolutionDebug<Eigen::SyclDevice, T>{
+//   void operator()(const Eigen::SyclDevice& d, typename TTypes<T, 2>::Tensor inter,
+//                   typename TTypes<T, 4>::Tensor interC,
+//                   typename TTypes<T, 4>::Tensor output,
+//                   typename TTypes<T, 4>::ConstTensor input,
+//                   typename TTypes<T, 4>::ConstTensor filter, int row_stride,
+//                   int col_stride, const Eigen::PaddingType& padding) {
+//     SpatialConvolutionFuncModified(d, inter, interC, output, input, filter, row_stride, col_stride,
+//                            padding);
+//   }
+// };
+// #endif
+
+template <typename Device>
+struct SpatialConvolutionDebug<Device, Eigen::half> {
+  void operator()(const Device& d,
+                  typename TTypes<Eigen::half, 2>::Tensor inter,
+                  typename TTypes<Eigen::half, 4>::Tensor interC,
+                  typename TTypes<Eigen::half, 2>::Tensor kernelR,
+                  typename TTypes<Eigen::half, 4>::Tensor output,
+                  typename TTypes<Eigen::half, 4>::ConstTensor input,
+                  typename TTypes<Eigen::half, 4>::ConstTensor filter,
+                  int row_stride, int col_stride,
+                  const Eigen::PaddingType& padding) {
+    output.device(d) =
+        Eigen::SpatialConvolution(input.cast<float>(), filter.cast<float>(),
+                                  col_stride, row_stride, padding)
+            .cast<Eigen::half>();
   }
 };
 

@@ -20,6 +20,7 @@ limitations under the License.
 #include "tensorflow/core/common_runtime/kernel_benchmark_testlib.h"
 #include "tensorflow/core/framework/fake_input.h"
 #include "tensorflow/core/framework/node_def_builder.h"
+#include "tensorflow/core/framework/graph_def_util.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/types.pb.h"
 #include "tensorflow/core/kernels/ops_testutil.h"
@@ -27,6 +28,7 @@ limitations under the License.
 #include "tensorflow/core/platform/test.h"
 #include "tensorflow/core/platform/test_benchmark.h"
 #include "tensorflow/core/public/session.h"
+#include <iostream>
 
 #include "tensorflow/core/kernels/conv_ops_gpu.h"
 
@@ -196,10 +198,13 @@ class FusedResizePadConvOpTest : public OpsTestBase {
 
     tensorflow::GraphDef graph;
     TF_ASSERT_OK(root.ToGraphDef(&graph));
-
+    tensorflow::SessionOptions options = tensorflow::SessionOptions();
+    options.config.set_log_device_placement(true);
     std::unique_ptr<tensorflow::Session> session(
-        tensorflow::NewSession(tensorflow::SessionOptions()));
+        tensorflow::NewSession(options));
     TF_ASSERT_OK(session->Create(graph));
+
+    // std::cout << SummarizeGraphDef(graph) << std::endl;
 
     std::vector<Tensor> unfused_tensors;
     TF_ASSERT_OK(session->Run({}, {"conv"}, {}, &unfused_tensors));
@@ -259,91 +264,91 @@ class FusedResizePadConvOpTest : public OpsTestBase {
   }
 };
 
-TEST_F(FusedResizePadConvOpTest, HandwrittenConv) { HandwrittenConv(); }
-
-TEST_F(FusedResizePadConvOpTest, IdentityComparative) {
-  CompareFusedAndSeparate(10, 10, 1, 10, 10, 0, 0, 1, 1, false, "REFLECT", 1,
-                          "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, ConvOnlyComparative) {
-  CompareFusedAndSeparate(10, 10, 3, 10, 10, 0, 0, 4, 4, false, "REFLECT", 1,
-                          "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, ResizeOnlyComparative) {
-  CompareFusedAndSeparate(10, 10, 1, 20, 20, 0, 0, 1, 1, false, "REFLECT", 1,
-                          "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, ResizeAndConvComparative) {
-  CompareFusedAndSeparate(2, 2, 4, 4, 2, 0, 0, 2, 2, false, "REFLECT", 1,
-                          "SAME");
-}
+// TEST_F(FusedResizePadConvOpTest, HandwrittenConv) { HandwrittenConv(); }
+//
+// TEST_F(FusedResizePadConvOpTest, IdentityComparative) {
+//   CompareFusedAndSeparate(10, 10, 1, 10, 10, 0, 0, 1, 1, false, "REFLECT", 1,
+//                           "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, ConvOnlyComparative) {
+//   CompareFusedAndSeparate(10, 10, 3, 10, 10, 0, 0, 4, 4, false, "REFLECT", 1,
+//                           "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, ResizeOnlyComparative) {
+//   CompareFusedAndSeparate(10, 10, 1, 20, 20, 0, 0, 1, 1, false, "REFLECT", 1,
+//                           "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, ResizeAndConvComparative) {
+//   CompareFusedAndSeparate(2, 2, 4, 4, 2, 0, 0, 2, 2, false, "REFLECT", 1,
+//                           "SAME");
+// }
 
 TEST_F(FusedResizePadConvOpTest, ResizeAlignAndConvComparative) {
   CompareFusedAndSeparate(2, 2, 4, 4, 2, 0, 0, 2, 2, true, "REFLECT", 1,
                           "SAME");
 }
 
-TEST_F(FusedResizePadConvOpTest, ResizeAndConvStridedComparative) {
-  CompareFusedAndSeparate(2, 2, 4, 4, 2, 0, 0, 2, 2, false, "REFLECT", 2,
-                          "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, ResizeAlignAndConvValidComparative) {
-  CompareFusedAndSeparate(2, 2, 4, 4, 2, 0, 0, 2, 2, true, "REFLECT", 1,
-                          "VALID");
-}
-
-TEST_F(FusedResizePadConvOpTest, PadOnlyComparative) {
-  CompareFusedAndSeparate(4, 4, 1, 4, 4, 2, 2, 1, 1, false, "REFLECT", 1,
-                          "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, PadOnlyWithChannelsComparative) {
-  CompareFusedAndSeparate(4, 4, 3, 4, 4, 2, 2, 1, 1, false, "REFLECT", 1,
-                          "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, ResizeAndPadComparative) {
-  CompareFusedAndSeparate(4, 4, 1, 6, 6, 2, 2, 1, 1, false, "REFLECT", 1,
-                          "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, PadOnlySymmetricComparative) {
-  CompareFusedAndSeparate(4, 4, 1, 4, 4, 2, 2, 1, 1, false, "SYMMETRIC", 1,
-                          "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, ResizeAndPadSymmetricComparative) {
-  CompareFusedAndSeparate(4, 4, 3, 6, 6, 2, 2, 1, 1, false, "SYMMETRIC", 1,
-                          "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, NoResizeIdentityComparative) {
-  CompareFusedPadOnlyAndSeparate(10, 10, 1, 0, 0, 1, 1, "REFLECT", 1, "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, NoResizeConvOnlyComparative) {
-  CompareFusedPadOnlyAndSeparate(10, 10, 3, 0, 0, 4, 4, "REFLECT", 1, "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, NoResizePadOnlyComparative) {
-  CompareFusedPadOnlyAndSeparate(4, 4, 1, 2, 2, 1, 1, "REFLECT", 1, "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, NoResizePadOnlyWithChannelsComparative) {
-  CompareFusedPadOnlyAndSeparate(4, 4, 3, 2, 2, 1, 1, "REFLECT", 1, "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, NoResizePadOnlySymmetricComparative) {
-  CompareFusedPadOnlyAndSeparate(4, 4, 1, 2, 2, 1, 1, "SYMMETRIC", 1, "SAME");
-}
-
-TEST_F(FusedResizePadConvOpTest, ResizeAndPadSymmetricComparativeLarge) {
-  CompareFusedAndSeparate(1000, 1000, 3, 1006, 1006, 2, 2, 1, 1, false,
-                          "SYMMETRIC", 1, "SAME");
-}
+// TEST_F(FusedResizePadConvOpTest, ResizeAndConvStridedComparative) {
+//   CompareFusedAndSeparate(2, 2, 4, 4, 2, 0, 0, 2, 2, false, "REFLECT", 2,
+//                           "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, ResizeAlignAndConvValidComparative) {
+//   CompareFusedAndSeparate(2, 2, 4, 4, 2, 0, 0, 2, 2, true, "REFLECT", 1,
+//                           "VALID");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, PadOnlyComparative) {
+//   CompareFusedAndSeparate(4, 4, 1, 4, 4, 2, 2, 1, 1, false, "REFLECT", 1,
+//                           "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, PadOnlyWithChannelsComparative) {
+//   CompareFusedAndSeparate(4, 4, 3, 4, 4, 2, 2, 1, 1, false, "REFLECT", 1,
+//                           "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, ResizeAndPadComparative) {
+//   CompareFusedAndSeparate(4, 4, 1, 6, 6, 2, 2, 1, 1, false, "REFLECT", 1,
+//                           "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, PadOnlySymmetricComparative) {
+//   CompareFusedAndSeparate(4, 4, 1, 4, 4, 2, 2, 1, 1, false, "SYMMETRIC", 1,
+//                           "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, ResizeAndPadSymmetricComparative) {
+//   CompareFusedAndSeparate(4, 4, 3, 6, 6, 2, 2, 1, 1, false, "SYMMETRIC", 1,
+//                           "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, NoResizeIdentityComparative) {
+//   CompareFusedPadOnlyAndSeparate(10, 10, 1, 0, 0, 1, 1, "REFLECT", 1, "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, NoResizeConvOnlyComparative) {
+//   CompareFusedPadOnlyAndSeparate(10, 10, 3, 0, 0, 4, 4, "REFLECT", 1, "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, NoResizePadOnlyComparative) {
+//   CompareFusedPadOnlyAndSeparate(4, 4, 1, 2, 2, 1, 1, "REFLECT", 1, "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, NoResizePadOnlyWithChannelsComparative) {
+//   CompareFusedPadOnlyAndSeparate(4, 4, 3, 2, 2, 1, 1, "REFLECT", 1, "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, NoResizePadOnlySymmetricComparative) {
+//   CompareFusedPadOnlyAndSeparate(4, 4, 1, 2, 2, 1, 1, "SYMMETRIC", 1, "SAME");
+// }
+//
+// TEST_F(FusedResizePadConvOpTest, ResizeAndPadSymmetricComparativeLarge) {
+//   CompareFusedAndSeparate(1000, 1000, 3, 1006, 1006, 2, 2, 1, 1, false,
+//                           "SYMMETRIC", 1, "SAME");
+// }
 
 }  // namespace tensorflow
