@@ -177,7 +177,7 @@ def main(unused_args):
   # Create a new resnet classifier.
   classifier = tf.estimator.Estimator(model_fn=res_net_model)
 
-  tf.logging.set_verbosity(tf.logging.INFO)  # Show training logs.
+  tf.logging.set_verbosity(tf.logging.DEBUG)  # Show training logs.
 
   # Train model and save summaries into logdir.
   train_input_fn = tf.estimator.inputs.numpy_input_fn(

@@ -32,6 +32,7 @@ from tensorflow.python.ops import random_ops
 from tensorflow.python.ops import variables
 from tensorflow.python.platform import test
 from tensorflow.core.protobuf import config_pb2
+from tensorflow.python.framework import graph_io
 
 
 class InceptionV3Test(test.TestCase):
@@ -221,13 +222,14 @@ class InceptionV3Test(test.TestCase):
     self.assertListEqual(pre_pool.get_shape().as_list(),
                          [batch_size, 3, 3, 2048])
 
-  def testUnknownImageShape(self):
-    ops.reset_default_graph()
+  def testUnknownImageShape(self): #uses cpu
+    # ops.reset_default_graph()
     batch_size = 2
     height, width = 299, 299
     num_classes = 1000
     input_np = np.random.uniform(0, 1, (batch_size, height, width, 3))
-    with self.test_session(config=config_pb2.ConfigProto(log_device_placement=True)) as sess:
+    with self.test_session() as sess:
+        #config=config_pb2.ConfigProto(log_device_placement=True)
       inputs = array_ops.placeholder(
           dtypes.float32, shape=(batch_size, None, None, 3))
       logits, end_points = inception_v3.inception_v3(inputs, num_classes)
@@ -238,8 +240,7 @@ class InceptionV3Test(test.TestCase):
       variables.global_variables_initializer().run()
       pre_pool_out = sess.run(pre_pool, feed_dict=feed_dict)
       self.assertListEqual(list(pre_pool_out.shape), [batch_size, 8, 8, 2048])
-
-  def testUnknownBatchSize(self):
+  def testUnknownBatchSize(self): #uses SYCL except for init
     batch_size = 1
     height, width = 299, 299
     num_classes = 1000
@@ -255,7 +256,7 @@ class InceptionV3Test(test.TestCase):
       output = sess.run(logits, {inputs: images.eval()})
       self.assertEquals(output.shape, (batch_size, num_classes))
 
-  def testEvaluation(self):
+  def testEvaluation(self): #SYCL except init
     batch_size = 2
     height, width = 299, 299
     num_classes = 1000
@@ -270,7 +271,7 @@ class InceptionV3Test(test.TestCase):
       output = sess.run(predictions)
       self.assertEquals(output.shape, (batch_size,))
 
-  def testTrainEvalWithReuse(self):
+  def testTrainEvalWithReuse(self): #SYCL except init
     train_batch_size = 5
     eval_batch_size = 2
     height, width = 150, 150
@@ -283,7 +284,7 @@ class InceptionV3Test(test.TestCase):
     logits, _ = inception_v3.inception_v3(
         eval_inputs, num_classes, is_training=False, reuse=True)
     predictions = math_ops.argmax(logits, 1)
-
+    # print("hi")
     with self.test_session(config=config_pb2.ConfigProto(log_device_placement=True)) as sess:
       sess.run(variables.global_variables_initializer())
       output = sess.run(predictions)

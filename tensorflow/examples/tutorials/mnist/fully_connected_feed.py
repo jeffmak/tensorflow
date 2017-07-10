@@ -149,7 +149,7 @@ def run_training():
     saver = tf.train.Saver()
 
     # Create a session for running Ops on the Graph.
-    sess = tf.Session()
+    sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
 
     # Instantiate a SummaryWriter to output summaries and the Graph.
     summary_writer = tf.summary.FileWriter(FLAGS.log_dir, sess.graph)

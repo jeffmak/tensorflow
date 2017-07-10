@@ -41,7 +41,7 @@ def train():
                                     one_hot=True,
                                     fake_data=FLAGS.fake_data)
 
-  sess = tf.InteractiveSession()
+  sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
   # Create a multilayer model.
 
   # Input placeholders
