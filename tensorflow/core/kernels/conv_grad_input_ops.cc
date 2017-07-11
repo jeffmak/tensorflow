@@ -1023,7 +1023,6 @@ REGISTER_KERNEL_BUILDER(Name("Conv2DBackpropInput")
 #define REGISTER_SYCL_KERNELS(T)                                        \
   REGISTER_KERNEL_BUILDER(Name("Conv2DBackpropInput")                   \
                               .Device(DEVICE_SYCL)                      \
-                              .Label("eigen_tensor")                    \
                               .TypeConstraint<T>("T"),                  \
                           Conv2DFastBackpropInputOp<SYCLDevice, T>);
 

@@ -101,6 +101,7 @@ py_test(
     ],
 )
 
+
 py_test(
     name = "mnist_with_summaries_test",
     size = "small",

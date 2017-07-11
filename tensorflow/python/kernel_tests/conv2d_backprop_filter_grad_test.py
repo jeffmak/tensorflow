@@ -27,12 +27,13 @@ from tensorflow.python.ops import gradient_checker
 from tensorflow.python.ops import nn_ops
 import tensorflow.python.ops.nn_grad  # pylint: disable=unused-import
 from tensorflow.python.platform import test
+from tensorflow.core.protobuf import config_pb2
 
 
 class Conv2DBackpropFilterGradTest(test.TestCase):
 
   def testGradient(self):
-    with self.test_session():
+    with self.test_session(config=config_pb2.ConfigProto(log_device_placement=True)):
       for padding in ["SAME", "VALID"]:
         for stride in [1, 2]:
           np.random.seed(1)

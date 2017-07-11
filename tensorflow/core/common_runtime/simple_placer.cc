@@ -872,6 +872,12 @@ void SimplePlacer::LogDeviceAssignment(const Node* node) const {
     LOG(INFO) << node->name() << ": "
               << "(" << node->type_string() << ")"
               << node->assigned_device_name();
+    LOG(INFO) << "[ ";
+    printf("[");
+    for (int i = 0; i < node->num_inputs(); ++i) {
+      printf("%d ",node->input_type(i));
+    }
+    printf("]\n");
   }
 }
 

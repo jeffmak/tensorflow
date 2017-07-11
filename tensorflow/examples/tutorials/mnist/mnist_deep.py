@@ -64,7 +64,8 @@ def deepnn(x):
 
   # Pooling layer - downsamples by 2X.
   with tf.name_scope('pool1'):
-    h_pool1 = max_pool_2x2(h_conv1)
+    with tf.device('/device:SYCL:0'):
+      h_pool1 = max_pool_2x2(h_conv1)
 
   # Second convolutional layer -- maps 32 feature maps to 64.
   with tf.name_scope('conv2'):
@@ -154,8 +155,13 @@ def main(_):
   train_writer = tf.summary.FileWriter(graph_location)
   train_writer.add_graph(tf.get_default_graph())
 
-  with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
+  saver = tf.train.Saver();
+  graph_def = tf.GraphDef()
+
+  with tf.Session(config=tf.ConfigProto(allow_soft_placement=False,log_device_placement=True)) as sess:
+    # print(sess.graph_def)
     sess.run(tf.global_variables_initializer())
+    save_path = saver.save(sess, "/home/jeffrey/temp/mnist_deep.txt")
     for i in range(20000):
       batch = mnist.train.next_batch(50)
       if i % 100 == 0:
