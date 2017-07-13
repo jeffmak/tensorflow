@@ -24,6 +24,7 @@ limitations under the License.
 #include "tensorflow/core/platform/macros.h"
 #include "tensorflow/core/platform/mutex.h"
 #include "tensorflow/core/platform/types.h"
+#include <iostream>
 
 namespace tensorflow {
 
@@ -88,6 +89,7 @@ class VariableOp : public OpKernel {
             var->tensor()->AllocatedBytes());
       }
     }
+    std::cout << name() << ": " << var->tensor()->SummarizeValue(4) << std::endl;
     var->Unref();
   }
 

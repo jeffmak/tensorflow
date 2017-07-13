@@ -29,6 +29,8 @@ limitations under the License.
 #include "tensorflow/core/platform/stream_executor.h"
 #endif  // GOOGLE_CUDA
 
+#include <iostream>
+
 namespace tensorflow {
 
 #if GOOGLE_CUDA
@@ -266,6 +268,9 @@ class MatMulOp : public OpKernel {
     const Tensor& a = ctx->input(0);
     const Tensor& b = ctx->input(1);
 
+    std::cout << "Input: " << a.SummarizeValue(4) << std::endl;
+    std::cout << "Input: " << b.SummarizeValue(2) << std::endl;
+
     // Check that the dimensions of the two matrices are valid.
     OP_REQUIRES(ctx, TensorShapeUtils::IsMatrix(a.shape()),
                 errors::InvalidArgument("In[0] is not a matrix"));
@@ -334,6 +339,11 @@ struct MatMulFunctor<SYCLDevice, T> {
       typename MatMulTypes<T>::in_type in1,
       const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair) {
     MatMul<SYCLDevice>(d, out, in0, in1, dim_pair);
+    std::cout << "type: " << typeid(T).name() << std::endl;
+    std::cout << "in0: " << in0(0,0) << " " << in0(0,1) << " "
+              << in0(1,0) << " " << in0(1,1) << std::endl;
+    std::cout << "in1: " << in1(0,0) << " " << in1(1,0) << std::endl;
+    std::cout << "out1: " << out(0,0) << " " << out(1,0) << std::endl;
   }
 };
 #endif  // TENSORFLOW_USE_SYCL

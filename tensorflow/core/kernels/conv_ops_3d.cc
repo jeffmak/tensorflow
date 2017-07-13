@@ -31,6 +31,7 @@ limitations under the License.
 #include "tensorflow/core/util/padding.h"
 #include "tensorflow/core/util/tensor_format.h"
 #include "tensorflow/core/util/use_cudnn.h"
+#include <iostream>
 
 #if GOOGLE_CUDA
 #include "tensorflow/core/platform/stream_executor.h"
@@ -41,6 +42,9 @@ namespace tensorflow {
 
 typedef Eigen::ThreadPoolDevice CPUDevice;
 typedef Eigen::GpuDevice GPUDevice;
+#ifdef TENSORFLOW_USE_SYCL
+typedef Eigen::SyclDevice SYCLDevice;
+#endif
 
 template <typename Device, typename T>
 struct LaunchConvOp;
@@ -55,12 +59,37 @@ struct LaunchConvOp<CPUDevice, T> {
                 errors::InvalidArgument("CPU implementation of Conv3D "
                                         "currently only supports the NHWC "
                                         "tensor format."));
+    std::cout.precision(8);
+    std::cout << "Input cpu: "<< input.SummarizeValue(10) << std::endl;
     functor::CuboidConvolution<CPUDevice, T>()(
         context->eigen_device<CPUDevice>(), output->tensor<T, 5>(),
         input.tensor<T, 5>(), filter.tensor<T, 5>(), strides[2], strides[1],
         strides[0], BrainPadding2EigenPadding(padding));
+    std::cout << "Output cpu: " << output->SummarizeValue(10) << std::endl;
   }
 };
+
+#ifdef TENSORFLOW_USE_SYCL
+template <typename T>
+struct LaunchConvOp<SYCLDevice, T> {
+  static void launch(OpKernelContext* context, bool cudnn_use_autotune,
+                     const Tensor& input, const Tensor& filter,
+                     const std::array<int64, 3>& strides, const Padding padding,
+                     TensorFormat data_format, Tensor* output) {
+    OP_REQUIRES(context, data_format == FORMAT_NHWC,
+                errors::InvalidArgument("SYCL implementation of Conv3D "
+                                        "currently only supports the NHWC "
+                                        "tensor format."));
+    std::cout.precision(15);
+    std::cout << "Input sycl: " << input.SummarizeValue(10) << std::endl;
+    functor::CuboidConvolution<CPUDevice, T>()(
+        context->eigen_device<CPUDevice>(), output->tensor<T, 5>(),
+        input.tensor<T, 5>(), filter.tensor<T, 5>(), strides[2], strides[1],
+        strides[0], BrainPadding2EigenPadding(padding));
+    std::cout << "OUtput sycl: " << output->SummarizeValue(10) << std::endl;
+  }
+};
+#endif  // TENSORFLOW_USE_SYCL
 
 template <typename Device, typename T>
 class Conv3DOp : public BinaryOp<T> {
@@ -494,5 +523,11 @@ REGISTER_KERNEL_BUILDER(
     Name("Conv3D").Device(DEVICE_GPU).TypeConstraint<float>("T"),
     Conv3DOp<GPUDevice, float>);
 #endif  // GOOGLE_CUDA
+
+#ifdef TENSORFLOW_USE_SYCL
+REGISTER_KERNEL_BUILDER(
+    Name("Conv3D").Device(DEVICE_SYCL).TypeConstraint<float>("T"),
+    Conv3DOp<SYCLDevice, float>);
+#endif  // TENSORFLOW_USE_SYCL
 
 }  // namespace tensorflow

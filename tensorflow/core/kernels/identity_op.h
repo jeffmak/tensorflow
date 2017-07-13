@@ -17,6 +17,7 @@ limitations under the License.
 #define TENSORFLOW_KERNELS_IDENTITY_OP_H_
 
 #include "tensorflow/core/framework/op_kernel.h"
+#include <iostream>
 
 namespace tensorflow {
 
@@ -26,8 +27,10 @@ class IdentityOp : public OpKernel {
 
   void Compute(OpKernelContext* context) override {
     if (IsRefType(context->input_dtype(0))) {
+      printf("yo\n");
       context->forward_ref_input_to_ref_output(0, 0);
     } else {
+      // std::cout << name() << " " << context->input(0).SummarizeValue(4) << std::endl;
       context->set_output(0, context->input(0));
     }
   }

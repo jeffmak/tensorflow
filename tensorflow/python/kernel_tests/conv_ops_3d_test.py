@@ -28,6 +28,7 @@ from tensorflow.python.ops import gradient_checker
 from tensorflow.python.ops import nn_ops
 import tensorflow.python.ops.nn_grad  # pylint: disable=unused-import
 from tensorflow.python.platform import test
+from tensorflow.core.protobuf import config_pb2
 
 
 def GetTestConfigs():
@@ -93,6 +94,7 @@ class Conv3DTest(test.TestCase):
       with self.test_session() as sess:
         values = sess.run(results)
         for value in values:
+          print(use_gpu)
           print("expected = ", expected)
           print("actual = ", value)
           self.assertAllClose(expected, value.flatten(), atol=tolerance,
@@ -343,7 +345,8 @@ class Conv3DTest(test.TestCase):
     else:
       data_type = dtypes.float64
       tolerance = 1e-8
-    with self.test_session(use_gpu=use_gpu):
+    with self.test_session(use_gpu=use_gpu, config=config_pb2.ConfigProto(log_device_placement=True)):
+      print("use_gpu: "+str(use_gpu))
       orig_input_tensor = constant_op.constant(
           input_data, shape=input_shape, dtype=data_type, name="input")
       filter_tensor = constant_op.constant(

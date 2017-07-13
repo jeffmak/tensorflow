@@ -1045,7 +1045,7 @@ class BaseSession(SessionInterface):
           return feed_fn(feed, feed_val)
       raise TypeError('Feed argument %r has invalid type %r'
                       % (feed, type(feed)))
-
+    # print("handle: "+str(handle))
     # Check session.
     if self._closed:
       raise RuntimeError('Attempted to use a closed Session.')
@@ -1063,6 +1063,7 @@ class BaseSession(SessionInterface):
       feed_dict = nest.flatten_dict_items(feed_dict)
       for feed, feed_val in feed_dict.items():
         for subfeed, subfeed_val in _feed_fn(feed, feed_val):
+        #   print("yo")
           try:
             subfeed_t = self.graph.as_graph_element(subfeed, allow_tensor=True,
                                                     allow_operation=False)
@@ -1120,10 +1121,12 @@ class BaseSession(SessionInterface):
     # We only want to really perform the run if fetches or targets are provided,
     # or if the call is a partial run that specifies feeds.
     if final_fetches or final_targets or (handle and feed_dict_tensor):
+    #   print("did run")
       results = self._do_run(handle, final_targets, final_fetches,
                              feed_dict_tensor, options, run_metadata)
     else:
       results = []
+    # print("results: "+str(results))
     return fetch_handler.build_results(self, results)
 
   def make_callable(self,
@@ -1290,6 +1293,10 @@ class BaseSession(SessionInterface):
       feeds = dict((compat.as_bytes(t.name), v) for t, v in feed_dict.items())
       fetches = _name_list(fetch_list)
       targets = _name_list(target_list)
+    #   print("feed_dict: "+str(feed_dict))
+    #   print("feeds: "+str(feeds))
+    #   print("fetches: "+str(fetches))
+    #   print("targets: "+str(targets))
 
     def _run_fn(session, feed_dict, fetch_list, target_list, options,
                 run_metadata):
@@ -1301,6 +1308,7 @@ class BaseSession(SessionInterface):
               session, options, feed_dict, fetch_list, target_list,
               run_metadata, status)
         else:
+        #   print("tfrun")
           return tf_session.TF_Run(session, options,
                                    feed_dict, fetch_list, target_list,
                                    status, run_metadata)
@@ -1317,9 +1325,11 @@ class BaseSession(SessionInterface):
                                     status)
 
     if handle is None:
+    #   print("_run_fn")
       return self._do_call(_run_fn, self._session, feeds, fetches, targets,
                            options, run_metadata)
     else:
+    #   print("_prun_fn")
       return self._do_call(_prun_fn, self._session, handle, feeds, fetches)
 
   def _do_call(self, fn, *args):

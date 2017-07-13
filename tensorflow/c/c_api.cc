@@ -547,7 +547,7 @@ static void TF_Run_Helper(
           InvalidArgument("Passing non-empty run_metadata is invalid.");
       return;
     }
-
+    // printf("run\n");
     RunMetadata run_metadata_proto;
     result = session->Run(run_options_proto, input_pairs, output_tensor_names,
                           target_oper_names, &outputs, &run_metadata_proto);

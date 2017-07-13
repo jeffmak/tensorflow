@@ -30,6 +30,7 @@ from tensorflow.python.ops import gradient_checker
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import spectral_ops
 from tensorflow.python.platform import test
+from tensorflow.core.protobuf import config_pb2
 
 VALID_FFT_RANKS = (1, 2, 3)
 
@@ -86,7 +87,7 @@ class BaseFFTOpsTest(test.TestCase):
     self.assertAllClose(x_np, x_tf, rtol=1e-4, atol=1e-4)
 
   def _checkGradComplex(self, func, x, y, result_is_complex=True):
-    with self.test_session(use_gpu=True):
+    with self.test_session(use_gpu=True,config=config_pb2.ConfigProto(log_device_placement=True)):
       inx = ops.convert_to_tensor(x)
       iny = ops.convert_to_tensor(y)
       # func is a forward or inverse, real or complex, batched or unbatched FFT
@@ -235,9 +236,11 @@ class FFTOpsTest(BaseFFTOpsTest):
       np.random.seed(54321)
       for rank in VALID_FFT_RANKS:
         for dims in xrange(rank, rank + 2):
+          print("rank: "+str(rank)+" dims: "+str(dims))
           re = np.random.rand(*((3,) * dims)).astype(np.float32) * 2 - 1
           im = np.random.rand(*((3,) * dims)).astype(np.float32) * 2 - 1
           self._checkGradComplex(self._tfFFTForRank(rank), re, im)
+          print("ahem")
           self._checkGradComplex(self._tfIFFTForRank(rank), re, im)
 
 
