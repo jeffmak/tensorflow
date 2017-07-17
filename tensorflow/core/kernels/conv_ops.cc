@@ -815,6 +815,9 @@ template class LaunchConv2DOp<GPUDevice, float>;
 REGISTER_KERNEL_BUILDER(
     Name("Conv2D").Device(DEVICE_SYCL).TypeConstraint<float>("T"),
     Conv2DOp<SYCLDevice, float>);
+
+// To be used inside depthwise_conv_op.cc.
+template class LaunchConv2DOp<SYCLDevice, float>;
 #endif // TENSORFLOW_USE_SYCL
 
 }  // namespace tensorflow

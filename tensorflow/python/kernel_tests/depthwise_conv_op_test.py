@@ -28,6 +28,7 @@ from tensorflow.python.ops import nn_impl
 from tensorflow.python.ops import nn_ops
 import tensorflow.python.ops.nn_grad  # pylint: disable=unused-import
 from tensorflow.python.platform import test
+from tensorflow.core.protobuf import config_pb2
 
 
 def ConfigsToTest():
@@ -121,7 +122,7 @@ class DepthwiseConv2DTest(test.TestCase):
     # Initializes the input and filter tensor with numbers incrementing from 1.
     x1 = [f * 1.0 for f in range(1, total_size_1 + 1)]
     x2 = [f * 1.0 for f in range(1, total_size_2 + 1)]
-    with self.test_session(use_gpu=use_gpu) as sess:
+    with self.test_session(use_gpu=use_gpu,config=config_pb2.ConfigProto(log_device_placement=True)) as sess:
       if data_type == dtypes.float32:
         tolerance = 1e-5
       else:
@@ -445,7 +446,7 @@ class DepthwiseConv2DTest(test.TestCase):
     x2 = np.random.rand(*output_sizes).astype(np.float32)
 
     def _GetVal(use_gpu):
-      with self.test_session(use_gpu=use_gpu):
+      with self.test_session(use_gpu=use_gpu,config=config_pb2.ConfigProto(log_device_placement=True)):
         t0 = constant_op.constant(input_sizes, shape=[len(input_sizes)])
         t1 = constant_op.constant(x1, shape=filter_sizes)
         t2 = constant_op.constant(x2, shape=output_sizes)
