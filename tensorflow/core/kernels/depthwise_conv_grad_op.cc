@@ -907,10 +907,6 @@ class DepthwiseConv2dNativeBackpropInputOp <SYCLDevice, T> : public OpKernel {
     Tensor* in_backprop = nullptr;
     OP_REQUIRES_OK(context, context->forward_input_or_allocate_output(
                                 {0}, 0, input_shape, &in_backprop));
-    // auto out_backprop_ptr = out_backprop.template flat<T>().data();
-    // auto filter_ptr = filter.template flat<T>().data();
-    // auto in_backprop_ptr = in_backprop->template flat<T>().data();
-    // If there is nothing to compute, return.
     if (input_shape.num_elements() == 0) {
       return;
     }

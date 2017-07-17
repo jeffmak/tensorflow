@@ -724,29 +724,12 @@ void LaunchDepthwiseConv2dSYCL(const SYCLDevice& d, const DepthwiseArgs args,
   }
 }
 
-// A simple launch pad to launch the Cuda kernel for depthwise convolution.
-// template <typename T>
-// struct DepthwiseConv2dSYCLLaunch {
-//   static void Run(const SYCLDevice& d, const DepthwiseArgs args,
-//                   const Tensor& input, const Tensor& filter, Tensor* output,
-//                   TensorFormat data_format) {
-//     if (args.filter_rows == 3 && args.filter_cols == 3) {
-//       LaunchDepthwiseConv2dSYCL<T, 3, 3>(d, args, input, filter, output,
-//                                         data_format);
-//     } else {
-//       LaunchDepthwiseConv2dSYCL<T, -1, -1>(d, args, input, filter, output,
-//                                           data_format);
-//     }
-//   }
-// };
 template <typename T>
 struct LaunchDepthwiseConvOp<SYCLDevice, T> {
   static void launch(OpKernelContext* ctx, const DepthwiseArgs args,
                      const Tensor& input, const Tensor& filter, Tensor* output,
                      TensorFormat data_format) {
     const SYCLDevice& d = ctx->eigen_device<SYCLDevice>();
-    // DepthwiseConv2dSYCLLaunch<T>().Run(d, args, input, filter, output,
-    //                                   data_format);
     if (args.filter_rows == 3 && args.filter_cols == 3) {
       LaunchDepthwiseConv2dSYCL<T, 3, 3>(d, args, input, filter, output,
                                         data_format);
